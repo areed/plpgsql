@@ -22,10 +22,6 @@ func Int64(db *sql.DB, fn string, args ...interface{}) (int64, *pq.Error) {
 //String executes a PL/pgSQL function returning a string.
 func String(db *sql.DB, fn string, args ...interface{}) (string, *pq.Error) {
 	var s string
-	rows, err := QueryRow(db, fn, args...)
-	if err != nil {
-		return s, err
-	}
-	err = ScanRow(rows, &s)
+	err := ExecFn(db, fn, args, &s)
 	return s, err
 }
