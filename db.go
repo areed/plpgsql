@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/lib/pq"
+	_ "github.com/lib/pq"
 )
 
 //Open returns a connection to a postgres database.
@@ -24,21 +24,21 @@ func MustOpen(conn string) *sql.DB {
 }
 
 //QueryRow is similar to sql.QueryRow but ignores sql.ErrNoRows and returns errors raised within a PL/pgSQL function.
-func QueryRow(db *sql.DB, fn string, args ...interface{}) (*sql.Rows, *pq.Error) {
+func QueryRow(db *sql.DB, fn string, args ...interface{}) (*sql.Rows, error) {
 	rows, err := db.Query(fmt.Sprintf("SELECT * FROM %s%s;", fn, paramSql[len(args)]), args...)
 	if err != nil {
-		return nil, Aufheben(err)
+		return nil, err
 	}
 	rows.Next()
 	err = rows.Err()
 	if err != nil {
-		return nil, Aufheben(err)
+		return nil, err
 	}
 	return rows, nil
 }
 
 //ExecFn runs a PL/pgSQL function.
-func ExecFn(db *sql.DB, fn string, args []interface{}, dests ...interface{}) *pq.Error {
+func ExecFn(db *sql.DB, fn string, args []interface{}, dests ...interface{}) error {
 	rows, err := QueryRow(db, fn, args...)
 	if err != nil {
 		return err
@@ -47,23 +47,12 @@ func ExecFn(db *sql.DB, fn string, args []interface{}, dests ...interface{}) *pq
 }
 
 //ScanRow scans the return values of a PL/pgSQL function into the provided destination arguments.
-func ScanRow(rows *sql.Rows, dests ...interface{}) *pq.Error {
+func ScanRow(rows *sql.Rows, dests ...interface{}) error {
 	err := rows.Scan(dests...)
 	if err != nil {
-		return Aufheben(err)
-	}
-	return nil
-}
-
-//Aufheben asserts or wraps an error as a pq.Error.
-func Aufheben(err error) *pq.Error {
-	if err == nil {
-		return nil
-	}
-	if err, ok := err.(*pq.Error); ok {
 		return err
 	}
-	return &pq.Error{Message: err.Error()}
+	return nil
 }
 
 var paramSql = map[int]string{
